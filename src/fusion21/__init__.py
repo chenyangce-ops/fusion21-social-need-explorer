@@ -11,6 +11,7 @@ below still keep the workflow understandable.
 from __future__ import annotations
 
 import json
+from decimal import Decimal, ROUND_HALF_UP
 from io import StringIO
 from pathlib import Path
 from random import Random
@@ -448,7 +449,9 @@ def fetch_imd_lad_raw(force: bool = False) -> pd.DataFrame:
     for column in numeric_columns:
         lsoa[column] = pd.to_numeric(lsoa[column], errors="coerce")
 
-    lsoa = lsoa.dropna(subset=["LAD19CD", "LAD19NM", "imd_rank", "population"])
+    lsoa = lsoa.dropna(
+        subset=["LAD19CD", "LAD19NM", "imd_score", "imd_rank", "population"]
+    )
     lsoa["weighted_rank"] = lsoa["imd_rank"] * lsoa["population"]
     lsoa["weighted_score"] = lsoa["imd_score"] * lsoa["population"]
     lsoa["most_deprived_10"] = lsoa["imd_decile"].le(1)
@@ -710,17 +713,7 @@ def _clean_imd_geography(
         }
     ).copy()
 
-    # 中文：IMD rank 越小代表越 deprived。为了地图更直观，这里反转成
-    # “数值越高 = social need 越强”的 0-100 relative index。
-    # English: IMD rank is reversed: a lower rank means stronger deprivation.
-    # For the map, this is converted into a 0-100 index where higher means
-    # stronger relative social need.
-    min_rank = df["mean_imd_rank"].min()
-    max_rank = df["mean_imd_rank"].max()
-    df["need_score"] = (max_rank - df["mean_imd_rank"]) / (max_rank - min_rank) * 100
-
     rounded_columns = [
-        "need_score",
         "mean_imd_rank",
         "mean_imd_score",
         "unweighted_mean_imd_rank",
@@ -736,9 +729,9 @@ def _clean_imd_geography(
         df["population_total"] = df["population_total"].round(0).astype("Int64")
 
     df["indicator_id"] = IMD_INDICATOR
-    df["indicator_label"] = "IMD 2019 population-weighted relative need index"
-    df["value"] = df["need_score"]
-    df["unit"] = "0-100 relative index"
+    df["indicator_label"] = "IMD 2019 population-weighted mean score"
+    df["value"] = df["mean_imd_score"]
+    df["unit"] = "IMD score"
     df["period"] = "2019"
     df["source"] = (
         "English Indices of Deprivation 2019 File 7: ranks, deciles, scores "
@@ -750,15 +743,14 @@ def _clean_imd_geography(
     df["indicator_group"] = "social_need"
     df["value_direction"] = "higher_is_higher_need"
     df["aggregation_method"] = (
-        "Population-weighted average IMD rank using total population mid-2015 "
-        "excluding prisoners"
+        "Sum of LSOA IMD score multiplied by LSOA population, divided by the "
+        "total population. Population is the mid-2015 total excluding prisoners."
     )
     df["interpretation"] = (
-        "Higher index values mean stronger relative deprivation within the "
-        "selected geography level. The index is derived from the "
-        "population-weighted average IMD rank of LSOAs in each 2019 "
-        f"{interpretation_geography}; 100 is the highest relative need in "
-        "the current map, not an absolute deprivation score."
+        "Higher values indicate stronger deprivation. This is a project-created "
+        "population-weighted summary of official LSOA IMD scores for each 2019 "
+        f"{interpretation_geography}; it is not an official regional statistic "
+        "and it is not a percentage."
     )
 
     preferred_columns = [
@@ -788,7 +780,6 @@ def _clean_imd_geography(
         "most_deprived_10_lsoa_pct",
         "most_deprived_20_lsoa_count",
         "most_deprived_20_lsoa_pct",
-        "need_score",
     ]
     output_columns = [column for column in preferred_columns if column in df.columns]
     return df[output_columns].sort_values(["indicator_id", "area_name"])
@@ -797,22 +788,16 @@ def _clean_imd_geography(
 def build_composite_social_need(
     imd_region: pd.DataFrame,
     unemployment_region: pd.DataFrame,
-    deprivation_weight: float = 0.5,
-    unemployment_weight: float = 0.5,
 ) -> pd.DataFrame:
-    """Combine two standardised indicators into an exploratory social-need score.
+    """Combine the two unstandardised inputs into a simple exploratory index.
 
-    Both components are expressed on a 0-100 scale where a higher value means
-    higher relative need. The default weights are deliberately equal and are
-    stored with every output row so the method remains visible and reproducible.
+    The calculation follows the project decision to retain the observed regional
+    values rather than stretch nine regions onto a 0-100 Min-Max scale. Because
+    the inputs use different numerical scales, the result is a descriptive index,
+    not a percentage or a claim that the two concepts have equal influence.
     """
 
-    if not abs(deprivation_weight + unemployment_weight - 1.0) < 1e-9:
-        raise ValueError("Composite social-need weights must add up to 1.0.")
-
-    imd = imd_region[["area_code", "area_name", "value"]].rename(
-        columns={"value": "deprivation_score"}
-    )
+    imd = imd_region[["area_code", "area_name", "mean_imd_score"]].copy()
     unemployment = unemployment_region[
         ["area_code", "value", "period", "period_start"]
     ].rename(
@@ -834,24 +819,13 @@ def build_composite_social_need(
             f"social-need score; received {len(composite)}."
         )
 
-    rate_min = composite["unemployment_rate"].min()
-    rate_max = composite["unemployment_rate"].max()
-    if rate_max == rate_min:
-        raise ValueError("Cannot standardise unemployment rates with no variation.")
-
-    composite["unemployment_score"] = (
-        (composite["unemployment_rate"] - rate_min) / (rate_max - rate_min) * 100
-    )
-    composite["deprivation_weight"] = deprivation_weight
-    composite["unemployment_weight"] = unemployment_weight
     composite["value"] = (
-        composite["deprivation_score"] * deprivation_weight
-        + composite["unemployment_score"] * unemployment_weight
-    )
+        composite["mean_imd_score"] + composite["unemployment_rate"]
+    ) / 2
 
     composite["indicator_id"] = COMPOSITE_NEED_INDICATOR
-    composite["indicator_label"] = "Composite social need score"
-    composite["unit"] = "0-100 relative index"
+    composite["indicator_label"] = "Raw social need index"
+    composite["unit"] = "raw composite index"
     composite["period"] = (
         "IMD 2019 + " + composite["unemployment_period"].astype(str)
     )
@@ -865,31 +839,29 @@ def build_composite_social_need(
     composite["indicator_group"] = "social_need_composite"
     composite["value_direction"] = "higher_is_higher_need"
     composite["interpretation"] = (
-        "Higher values indicate stronger relative social need across the nine "
-        "English regions. This is an exploratory comparison score, not an "
-        "official deprivation statistic or a measure of Fusion21 impact."
+        "Higher values indicate stronger observed social need under this simple "
+        "project formula. The result is an exploratory index, not a percentage, "
+        "an official statistic or a measure of Fusion21 impact."
     )
     composite["aggregation_method"] = (
-        "Equal-weight composite: 50% IMD population-weighted relative need "
-        "index plus 50% min-max standardised regional unemployment rate. "
-        "Both components use a 0-100 scale where higher means higher need."
+        "Raw social need index = (population-weighted mean IMD score + regional "
+        "unemployment rate) / 2. Neither input is Min-Max standardised. The two "
+        "inputs have different units and numerical ranges, so this is a simple "
+        "descriptive combination rather than a balanced causal model."
     )
 
-    rounded_columns = [
-        "deprivation_score",
-        "unemployment_rate",
-        "unemployment_score",
-        "value",
-    ]
-    composite[rounded_columns] = composite[rounded_columns].round(1)
+    component_columns = ["mean_imd_score", "unemployment_rate"]
+    composite[component_columns] = composite[component_columns].round(1)
+    composite["value"] = composite["value"].map(
+        lambda value: float(
+            Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        )
+    )
 
     output_columns = COMMON_METRIC_COLUMNS + [
         "period_start",
-        "deprivation_score",
+        "mean_imd_score",
         "unemployment_rate",
-        "unemployment_score",
-        "deprivation_weight",
-        "unemployment_weight",
     ]
     return composite[output_columns].sort_values(["indicator_id", "area_name"])
 
@@ -913,12 +885,19 @@ def _is_region_latest(latest: pd.DataFrame) -> bool:
         UNEMPLOYMENT_INDICATOR,
         COMPOSITE_NEED_INDICATOR,
     }
+    composite = latest[latest["indicator_id"] == COMPOSITE_NEED_INDICATOR]
+    imd = latest[latest["indicator_id"] == IMD_INDICATOR]
     return (
         not latest.empty
         and set(COMMON_METRIC_COLUMNS).issubset(latest.columns)
+        and {"mean_imd_score", "unemployment_rate"}.issubset(latest.columns)
         and latest["geography"].eq(TARGET_GEOGRAPHY).all()
         and required_indicators.issubset(set(latest["indicator_id"]))
         and latest.groupby("indicator_id")["area_code"].nunique().ge(9).all()
+        and not composite.empty
+        and composite["unit"].eq("raw composite index").all()
+        and not imd.empty
+        and imd["unit"].eq("IMD score").all()
     )
 
 

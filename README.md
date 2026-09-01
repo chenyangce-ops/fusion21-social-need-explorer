@@ -6,6 +6,17 @@ Streamlit prototype for comparing public social need across the nine English reg
 
 The deprivation and unemployment indicators use public data. All Fusion21 contract, activity and Foundation records in this repository are synthetic demonstration data. They test the pipeline and interface; they do not evaluate Fusion21's real performance or prove social impact.
 
+The public need view retains the observed inputs rather than converting nine
+regions to a 0-100 Min-Max scale. The exploratory index is calculated as:
+
+```text
+(population-weighted mean IMD score + regional unemployment rate) / 2
+```
+
+The inputs have different units and numerical ranges. The result is therefore a
+simple descriptive index, not a percentage, an official regional statistic or a
+claim that the two concepts have equal influence.
+
 ## Run locally
 
 ```powershell

@@ -22,14 +22,14 @@ UNEMPLOYMENT_INDICATOR = "unemployment_rate_lfs"
 COMPOSITE_NEED_INDICATOR = "social_need_composite"
 
 INDICATOR_NAMES = {
-    COMPOSITE_NEED_INDICATOR: "Composite social need score",
-    IMD_INDICATOR: "Population-weighted deprivation",
+    COMPOSITE_NEED_INDICATOR: "Raw social need index",
+    IMD_INDICATOR: "Population-weighted mean IMD score",
     UNEMPLOYMENT_INDICATOR: "Regional unemployment rate",
 }
 
 INDICATOR_SHORT_NAMES = {
-    COMPOSITE_NEED_INDICATOR: "Social need score",
-    IMD_INDICATOR: "Relative need index",
+    COMPOSITE_NEED_INDICATOR: "Raw need index",
+    IMD_INDICATOR: "Mean IMD score",
     UNEMPLOYMENT_INDICATOR: "Unemployment rate",
 }
 
@@ -224,16 +224,8 @@ def format_money(value: float) -> str:
     return f"£{value:,.0f}"
 
 
-def minmax_index(values: pd.Series) -> pd.Series:
-    minimum = float(values.min())
-    maximum = float(values.max())
-    if maximum == minimum:
-        return pd.Series(50.0, index=values.index)
-    return (values - minimum) / (maximum - minimum) * 100
-
-
 def comparison_group(row: pd.Series, imd_median: float, unemployment_median: float) -> str:
-    high_imd = row["imd_need"] >= imd_median
+    high_imd = row["imd_score"] >= imd_median
     high_unemployment = row["unemployment_rate"] >= unemployment_median
     if high_imd and high_unemployment:
         return "Higher on both"
@@ -249,7 +241,7 @@ def need_activity_group(
     need_median: float,
     measure_median: float,
 ) -> str:
-    high_need = row["social_need_score"] >= need_median
+    high_need = row["raw_need_index"] >= need_median
     high_measure = row["selected_measure"] >= measure_median
     if high_need and not high_measure:
         return "High need / lower contribution"
@@ -334,8 +326,8 @@ st.markdown(
     <div class="app-copy">
     This prototype combines two public sources in one reusable pipeline:
     population-weighted deprivation and the latest ONS regional unemployment rate.
-    It also provides a transparent equal-weight composite social need score while
-    preserving both source indicators for comparison.
+    It retains both observed inputs and provides a simple raw social need index for
+    regional comparison without converting the nine regions to a 0-100 scale.
     </div>
     """,
     unsafe_allow_html=True,
@@ -405,9 +397,8 @@ with map_tab:
             hover_data[column] = display_format
 
     composite_hover_fields = {
-        "deprivation_score": ":,.1f",
+        "mean_imd_score": ":,.1f",
         "unemployment_rate": ":,.1f",
-        "unemployment_score": ":,.1f",
     }
     for column, display_format in composite_hover_fields.items():
         if column in map_df.columns and map_df[column].notna().any():
@@ -434,9 +425,8 @@ with map_tab:
             "population_total": "Population",
             "most_deprived_10_lsoa_pct": "% LSOAs in most deprived 10%",
             "local_authority_count": "Local authorities",
-            "deprivation_score": "Deprivation component (0-100)",
+            "mean_imd_score": "Population-weighted mean IMD score",
             "unemployment_rate": "Unemployment rate (%)",
-            "unemployment_score": "Unemployment component (0-100)",
         },
     )
     fig.update_layout(
@@ -499,20 +489,18 @@ with map_tab:
             st.markdown(
                 f"""
                 <div class="detail-box">
-                    <div class="detail-label">Deprivation component</div>
-                    <div class="detail-value">{selected_area['deprivation_score']:,.1f}</div>
+                    <div class="detail-label">Population-weighted mean IMD score</div>
+                    <div class="detail-value">{selected_area['mean_imd_score']:,.1f}</div>
                 </div>
                 <div class="detail-box">
-                    <div class="detail-label">Unemployment component</div>
-                    <div class="detail-value">{selected_area['unemployment_score']:,.1f}</div>
-                </div>
-                <div class="detail-box">
-                    <div class="detail-label">Observed unemployment rate</div>
+                    <div class="detail-label">Regional unemployment rate</div>
                     <div class="detail-value">{selected_area['unemployment_rate']:,.1f}%</div>
                 </div>
                 <div class="method-note">
-                <strong>Formula:</strong> 50% deprivation score + 50% standardised
-                unemployment score. All component scores run from 0 to 100.
+                <strong>Formula:</strong> (population-weighted mean IMD score +
+                unemployment rate) / 2. The inputs are not standardised. Because
+                their numerical ranges differ, this is a simple exploratory index,
+                not a percentage or a claim of equal influence.
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -545,7 +533,7 @@ with map_tab:
         st.subheader("Highest-value regions")
         ranking_columns = ["area_name", "value"]
         if selected_indicator == COMPOSITE_NEED_INDICATOR:
-            ranking_columns.extend(["deprivation_score", "unemployment_score"])
+            ranking_columns.extend(["mean_imd_score", "unemployment_rate"])
         ranking = indicator_data[ranking_columns].sort_values("value", ascending=False)
         ranking_config: dict[str, object] = {
             "area_name": "Region",
@@ -556,11 +544,11 @@ with map_tab:
         if selected_indicator == COMPOSITE_NEED_INDICATOR:
             ranking_config.update(
                 {
-                    "deprivation_score": st.column_config.NumberColumn(
-                        "Deprivation", format="%.1f"
+                    "mean_imd_score": st.column_config.NumberColumn(
+                        "Mean IMD score", format="%.1f"
                     ),
-                    "unemployment_score": st.column_config.NumberColumn(
-                        "Unemployment", format="%.1f"
+                    "unemployment_rate": st.column_config.NumberColumn(
+                        "Unemployment rate", format="%.1f%%"
                     ),
                 }
             )
@@ -590,7 +578,7 @@ with alignment_tab:
     st.markdown(
         """
         <div class="section-copy">
-        This view places the public Social Need Score beside one synthetic Fusion21
+        This view places the public Raw Need Index beside one synthetic Fusion21
         contribution measure. The four map categories are defined by the median of
         each measure. The red category is the main review group: regions with higher
         public need but lower recorded contribution in the demonstration data.
@@ -625,7 +613,7 @@ with alignment_tab:
     social_need_latest = latest[
         latest["indicator_id"] == COMPOSITE_NEED_INDICATOR
     ][["area_code", "area_name", "value"]].rename(
-        columns={"value": "social_need_score"}
+        columns={"value": "raw_need_index"}
     )
     alignment = social_need_latest.merge(
         synthetic_region_summary[
@@ -646,7 +634,7 @@ with alignment_tab:
         validate="one_to_one",
     )
     alignment["selected_measure"] = alignment[selected_alignment_measure]
-    need_median = float(alignment["social_need_score"].median())
+    need_median = float(alignment["raw_need_index"].median())
     measure_median = float(alignment["selected_measure"].median())
     alignment["alignment_group"] = alignment.apply(
         need_activity_group,
@@ -678,13 +666,13 @@ with alignment_tab:
         hover_name="area_name",
         hover_data={
             "area_code": True,
-            "social_need_score": ":.1f",
+            "raw_need_index": ":.1f",
             "selected_measure": ":.1f",
             "alignment_group": False,
         },
         projection="mercator",
         labels={
-            "social_need_score": "Social Need Score",
+            "raw_need_index": "Raw Need Index",
             "selected_measure": alignment_measure_labels[selected_alignment_measure],
             "alignment_group": "Need-contribution pattern",
         },
@@ -738,8 +726,8 @@ with alignment_tab:
     with alignment_detail_column:
         st.subheader(selected_area_name)
         st.metric(
-            "Social Need Score",
-            f"{selected_alignment['social_need_score']:.1f}",
+            "Raw Need Index",
+            f"{selected_alignment['raw_need_index']:.1f}",
         )
         st.metric(
             alignment_measure_labels[selected_alignment_measure],
@@ -766,7 +754,7 @@ with alignment_tab:
     )
     alignment_scatter = px.scatter(
         alignment,
-        x="social_need_score",
+        x="raw_need_index",
         y="selected_measure",
         text="area_name",
         color="alignment_group",
@@ -775,12 +763,12 @@ with alignment_tab:
         hover_name="area_name",
         hover_data={
             "area_code": True,
-            "social_need_score": ":.1f",
+            "raw_need_index": ":.1f",
             "selected_measure": ":.1f",
             "alignment_group": False,
         },
         labels={
-            "social_need_score": "Composite Social Need Score",
+            "raw_need_index": "Raw Social Need Index",
             "selected_measure": alignment_measure_labels[selected_alignment_measure],
             "alignment_group": "Need-contribution pattern",
         },
@@ -813,12 +801,12 @@ with alignment_tab:
     )
     st.caption(
         "Regions are grouped by need-contribution pattern. Within each group, "
-        "regions with the higher Social Need Score appear first."
+        "regions with the higher Raw Need Index appear first."
     )
     priority_table = alignment[
         [
             "area_name",
-            "social_need_score",
+            "raw_need_index",
             "selected_measure",
             "alignment_group",
         ]
@@ -833,7 +821,7 @@ with alignment_tab:
         pattern_priority
     )
     priority_table = priority_table.sort_values(
-        ["pattern_priority", "social_need_score"],
+        ["pattern_priority", "raw_need_index"],
         ascending=[True, False],
     ).drop(columns="pattern_priority")
     st.dataframe(
@@ -842,8 +830,8 @@ with alignment_tab:
         hide_index=True,
         column_config={
             "area_name": "Region",
-            "social_need_score": st.column_config.NumberColumn(
-                "Social Need Score", format="%.1f"
+            "raw_need_index": st.column_config.NumberColumn(
+                "Raw Need Index", format="%.1f"
             ),
             "selected_measure": st.column_config.NumberColumn(
                 alignment_measure_labels[selected_alignment_measure], format="%.1f"
@@ -1117,7 +1105,7 @@ with compare_tab:
         """
         <div class="section-copy">
         The scatter plot keeps both measures separate. Regions further right have
-        stronger relative deprivation; regions higher on the chart have a higher
+        higher population-weighted IMD scores; regions higher on the chart have a higher
         unemployment rate. Median lines provide a simple reference without forcing
         nine regions into unstable quintile groups.
         </div>
@@ -1136,14 +1124,14 @@ with compare_tab:
         .reset_index()
         .rename(
             columns={
-                IMD_INDICATOR: "imd_need",
+                IMD_INDICATOR: "imd_score",
                 UNEMPLOYMENT_INDICATOR: "unemployment_rate",
                 COMPOSITE_NEED_INDICATOR: "composite_need",
             }
         )
-        .dropna(subset=["imd_need", "unemployment_rate"])
+        .dropna(subset=["imd_score", "unemployment_rate"])
     )
-    imd_median = float(comparison["imd_need"].median())
+    imd_median = float(comparison["imd_score"].median())
     unemployment_median = float(comparison["unemployment_rate"].median())
     comparison["comparison_group"] = comparison.apply(
         comparison_group,
@@ -1160,7 +1148,7 @@ with compare_tab:
     }
     scatter = px.scatter(
         comparison,
-        x="imd_need",
+        x="imd_score",
         y="unemployment_rate",
         text="area_name",
         color="comparison_group",
@@ -1168,15 +1156,15 @@ with compare_tab:
         hover_name="area_name",
         hover_data={
             "area_code": True,
-            "imd_need": ":.1f",
+            "imd_score": ":.1f",
             "unemployment_rate": ":.1f",
             "composite_need": ":.1f",
             "comparison_group": False,
         },
         labels={
-            "imd_need": "Population-weighted relative deprivation index",
+            "imd_score": "Population-weighted mean IMD score",
             "unemployment_rate": "Unemployment rate (%)",
-            "composite_need": "Composite social need score",
+            "composite_need": "Raw social need index",
             "comparison_group": "Pattern",
         },
     )
@@ -1216,10 +1204,12 @@ with compare_tab:
         st.markdown(
             """
             <div class="warning-note">
-            <strong>The composite is an exploratory score.</strong><br>
-            The two measures are first put on the same 0-100 scale and then combined
-            with equal weights. IMD already contains an Employment Deprivation Domain,
-            so this scatter plot remains important for checking possible overlap.
+            <strong>The raw index is exploratory.</strong><br>
+            It is the arithmetic average of the observed IMD score and unemployment
+            rate, with no Min-Max standardisation. Their units and numerical ranges
+            differ, so the result is not a percentage and does not imply equal
+            influence. IMD also contains an Employment Deprivation Domain, so this
+            scatter plot remains important for checking possible overlap.
             </div>
             """,
             unsafe_allow_html=True,
@@ -1234,7 +1224,7 @@ with compare_tab:
                 <div class="detail-value">{selected_comparison['comparison_group']}</div>
             </div>
             <div class="detail-box">
-                <div class="detail-label">Composite social need score</div>
+                <div class="detail-label">Raw social need index</div>
                 <div class="detail-value">{selected_comparison['composite_need']:.1f}</div>
             </div>
             """,
@@ -1244,7 +1234,7 @@ with compare_tab:
     comparison_table = comparison[
         [
             "area_name",
-            "imd_need",
+            "imd_score",
             "unemployment_rate",
             "composite_need",
             "comparison_group",
@@ -1256,14 +1246,14 @@ with compare_tab:
         hide_index=True,
         column_config={
             "area_name": "Region",
-            "imd_need": st.column_config.NumberColumn(
-                "Relative deprivation index", format="%.1f"
+            "imd_score": st.column_config.NumberColumn(
+                "Mean IMD score", format="%.1f"
             ),
             "unemployment_rate": st.column_config.NumberColumn(
                 "Unemployment rate", format="%.1f%%"
             ),
             "composite_need": st.column_config.NumberColumn(
-                "Composite social need", format="%.1f"
+                "Raw social need index", format="%.1f"
             ),
             "comparison_group": "Pattern",
         },
