@@ -1,0 +1,10 @@
+area_code,area_name,project_count,contract_value,foundation_investment,recorded_activity_count,projects_with_foundation_investment,activities_per_project,decarbonisation_count,waste_reduction_count,water_reduction_count,local_ecosystems_count,community_engagement_count,green_skills_count,activity_possible_count,activity_score,procurement_score,foundation_score,contribution_score,synthetic_data
+E12000001,North East,3,8332000.0,227000.0,4,3,1.33,0,2,0,0,1,1,18,22.2,5.0,20.9,16.1,True
+E12000002,North West,6,23061000.0,380000.0,24,2,4.0,4,4,4,4,3,5,36,66.7,42.5,49.7,53.0,True
+E12000003,Yorkshire and The Humber,3,6359000.0,115500.0,8,2,2.67,1,2,2,0,1,2,18,44.4,0.0,0.0,14.8,True
+E12000004,East Midlands,4,16032000.0,299000.0,11,1,2.75,2,1,2,0,4,2,24,45.8,24.6,34.5,35.0,True
+E12000005,West Midlands,6,18855000.0,513500.0,23,4,3.83,3,5,2,5,3,5,36,63.9,31.8,74.7,56.8,True
+E12000006,East of England,5,22133000.0,440500.0,15,3,3.0,3,2,4,3,2,1,30,50.0,40.2,61.0,50.4,True
+E12000007,London,7,45622000.0,648000.0,27,4,3.86,6,4,6,5,2,4,42,64.3,100.0,100.0,88.1,True
+E12000008,South East,7,36361000.0,294500.0,24,4,3.43,4,6,3,5,2,4,42,57.1,76.4,33.6,55.7,True
+E12000009,South West,4,18565000.0,261000.0,13,2,3.25,3,3,1,0,2,4,24,54.2,31.1,27.3,37.5,True

@@ -1,0 +1,46 @@
+ID Number,Member,Supplier,Fusion21 Framework,Lot,Start Date,Contract Value FY2024/25,Delivery Postcode,Local Authority Code,Local Authority Name,ONS Region Code,Region Name,Latitude,Longitude,Synthetic Data
+F21-SYN-0001,Demo Member 01-1,Demo Supplier 01,Decarbonisation,Lot 1,2024-03-04,2994000.0,NE1 1AA,E08000021,Newcastle upon Tyne,E12000001,North East,55.005622,-1.518361,True
+F21-SYN-0002,Demo Member 01-2,Demo Supplier 02,Construction Works,Lot 2,2024-05-07,3534000.0,NE1 1AA,E08000021,Newcastle upon Tyne,E12000001,North East,55.039485,-1.531698,True
+F21-SYN-0003,Demo Member 01-1,Demo Supplier 03,Facilities Management,Lot 3,2024-07-10,1804000.0,NE1 1AA,E08000021,Newcastle upon Tyne,E12000001,North East,54.905437,-1.590965,True
+F21-SYN-0004,Demo Member 02-1,Demo Supplier 04,Public Buildings,Lot 4,2024-09-13,5077000.0,M1 1AE,E08000003,Manchester,E12000002,North West,53.511643,-2.18141,True
+F21-SYN-0005,Demo Member 02-2,Demo Supplier 05,Decarbonisation,Lot 1,2024-11-16,2264000.0,M1 1AE,E08000003,Manchester,E12000002,North West,53.482773,-2.261839,True
+F21-SYN-0006,Demo Member 02-1,Demo Supplier 06,Construction Works,Lot 2,2024-01-19,4528000.0,M1 1AE,E08000003,Manchester,E12000002,North West,53.540089,-2.260787,True
+F21-SYN-0007,Demo Member 02-2,Demo Supplier 07,Facilities Management,Lot 3,2024-03-22,6432000.0,M1 1AE,E08000003,Manchester,E12000002,North West,53.503648,-2.307657,True
+F21-SYN-0008,Demo Member 02-1,Demo Supplier 08,Public Buildings,Lot 4,2024-05-01,2788000.0,M1 1AE,E08000003,Manchester,E12000002,North West,53.437436,-2.24287,True
+F21-SYN-0009,Demo Member 02-2,Demo Supplier 09,Decarbonisation,Lot 1,2024-07-04,1972000.0,M1 1AE,E08000003,Manchester,E12000002,North West,53.486286,-2.298086,True
+F21-SYN-0010,Demo Member 03-1,Demo Supplier 10,Construction Works,Lot 2,2024-09-07,2530000.0,LS1 1UR,E08000035,Leeds,E12000003,Yorkshire and The Humber,53.733032,-1.48849,True
+F21-SYN-0011,Demo Member 03-2,Demo Supplier 11,Facilities Management,Lot 3,2024-11-10,2235000.0,LS1 1UR,E08000035,Leeds,E12000003,Yorkshire and The Humber,53.875233,-1.590012,True
+F21-SYN-0012,Demo Member 03-1,Demo Supplier 12,Public Buildings,Lot 4,2024-01-13,1594000.0,LS1 1UR,E08000035,Leeds,E12000003,Yorkshire and The Humber,53.736693,-1.625813,True
+F21-SYN-0013,Demo Member 04-1,Demo Supplier 01,Decarbonisation,Lot 1,2024-03-16,4245000.0,NG1 1AA,E06000018,Nottingham,E12000004,East Midlands,52.896459,-1.228455,True
+F21-SYN-0014,Demo Member 04-2,Demo Supplier 02,Construction Works,Lot 2,2024-05-19,4934000.0,NG1 1AA,E06000018,Nottingham,E12000004,East Midlands,52.955697,-1.186196,True
+F21-SYN-0015,Demo Member 04-1,Demo Supplier 03,Facilities Management,Lot 3,2024-07-22,2609000.0,NG1 1AA,E06000018,Nottingham,E12000004,East Midlands,52.955619,-1.138795,True
+F21-SYN-0016,Demo Member 04-2,Demo Supplier 04,Public Buildings,Lot 4,2024-09-01,4244000.0,NG1 1AA,E06000018,Nottingham,E12000004,East Midlands,53.028328,-1.074753,True
+F21-SYN-0017,Demo Member 05-1,Demo Supplier 05,Decarbonisation,Lot 1,2024-11-04,2272000.0,B1 1BB,E08000025,Birmingham,E12000005,West Midlands,52.462996,-1.804095,True
+F21-SYN-0018,Demo Member 05-2,Demo Supplier 06,Construction Works,Lot 2,2024-01-07,2572000.0,B1 1BB,E08000025,Birmingham,E12000005,West Midlands,52.419105,-1.794981,True
+F21-SYN-0019,Demo Member 05-1,Demo Supplier 07,Facilities Management,Lot 3,2024-03-10,4345000.0,B1 1BB,E08000025,Birmingham,E12000005,West Midlands,52.441459,-1.874603,True
+F21-SYN-0020,Demo Member 05-2,Demo Supplier 08,Public Buildings,Lot 4,2024-05-13,2130000.0,B1 1BB,E08000025,Birmingham,E12000005,West Midlands,52.478845,-1.913628,True
+F21-SYN-0021,Demo Member 05-1,Demo Supplier 09,Decarbonisation,Lot 1,2024-07-16,3117000.0,B1 1BB,E08000025,Birmingham,E12000005,West Midlands,52.484546,-1.937999,True
+F21-SYN-0022,Demo Member 05-2,Demo Supplier 10,Construction Works,Lot 2,2024-09-19,4419000.0,B1 1BB,E08000025,Birmingham,E12000005,West Midlands,52.496846,-1.905087,True
+F21-SYN-0023,Demo Member 06-1,Demo Supplier 11,Facilities Management,Lot 3,2024-11-22,4086000.0,CB1 1BH,E07000008,Cambridge,E12000006,East of England,52.164858,0.125914,True
+F21-SYN-0024,Demo Member 06-2,Demo Supplier 12,Public Buildings,Lot 4,2024-01-01,3825000.0,CB1 1BH,E07000008,Cambridge,E12000006,East of England,52.265501,0.109827,True
+F21-SYN-0025,Demo Member 06-1,Demo Supplier 01,Decarbonisation,Lot 1,2024-03-04,5965000.0,CB1 1BH,E07000008,Cambridge,E12000006,East of England,52.260579,0.088391,True
+F21-SYN-0026,Demo Member 06-2,Demo Supplier 02,Construction Works,Lot 2,2024-05-07,2589000.0,CB1 1BH,E07000008,Cambridge,E12000006,East of England,52.215549,0.195486,True
+F21-SYN-0027,Demo Member 06-1,Demo Supplier 03,Facilities Management,Lot 3,2024-07-10,5668000.0,CB1 1BH,E07000008,Cambridge,E12000006,East of England,52.133332,0.132631,True
+F21-SYN-0028,Demo Member 07-1,Demo Supplier 04,Public Buildings,Lot 4,2024-09-13,5131000.0,EC1A 1BB,E09000001,City of London,E12000007,London,51.456189,-0.225496,True
+F21-SYN-0029,Demo Member 07-2,Demo Supplier 05,Decarbonisation,Lot 1,2024-11-16,7803000.0,EC1A 1BB,E09000001,City of London,E12000007,London,51.537645,-0.087996,True
+F21-SYN-0030,Demo Member 07-1,Demo Supplier 06,Construction Works,Lot 2,2024-01-19,7428000.0,EC1A 1BB,E09000001,City of London,E12000007,London,51.518372,-0.047905,True
+F21-SYN-0031,Demo Member 07-2,Demo Supplier 07,Facilities Management,Lot 3,2024-03-22,9373000.0,EC1A 1BB,E09000001,City of London,E12000007,London,51.475545,-0.092604,True
+F21-SYN-0032,Demo Member 07-1,Demo Supplier 08,Public Buildings,Lot 4,2024-05-01,7006000.0,EC1A 1BB,E09000001,City of London,E12000007,London,51.549727,-0.206307,True
+F21-SYN-0033,Demo Member 07-2,Demo Supplier 09,Decarbonisation,Lot 1,2024-07-04,5462000.0,EC1A 1BB,E09000001,City of London,E12000007,London,51.540637,-0.173026,True
+F21-SYN-0034,Demo Member 07-1,Demo Supplier 10,Construction Works,Lot 2,2024-09-07,3419000.0,EC1A 1BB,E09000001,City of London,E12000007,London,51.557015,-0.063452,True
+F21-SYN-0035,Demo Member 08-1,Demo Supplier 11,Facilities Management,Lot 3,2024-11-10,3759000.0,GU1 1AA,E07000209,Guildford,E12000008,South East,51.261341,-0.56701,True
+F21-SYN-0036,Demo Member 08-2,Demo Supplier 12,Public Buildings,Lot 4,2024-01-13,3718000.0,GU1 1AA,E07000209,Guildford,E12000008,South East,51.267334,-0.491247,True
+F21-SYN-0037,Demo Member 08-1,Demo Supplier 01,Decarbonisation,Lot 1,2024-03-16,5036000.0,GU1 1AA,E07000209,Guildford,E12000008,South East,51.240302,-0.646523,True
+F21-SYN-0038,Demo Member 08-2,Demo Supplier 02,Construction Works,Lot 2,2024-05-19,6557000.0,GU1 1AA,E07000209,Guildford,E12000008,South East,51.26128,-0.605797,True
+F21-SYN-0039,Demo Member 08-1,Demo Supplier 03,Facilities Management,Lot 3,2024-07-22,7556000.0,GU1 1AA,E07000209,Guildford,E12000008,South East,51.267954,-0.634288,True
+F21-SYN-0040,Demo Member 08-2,Demo Supplier 04,Public Buildings,Lot 4,2024-09-01,3954000.0,GU1 1AA,E07000209,Guildford,E12000008,South East,51.226739,-0.483065,True
+F21-SYN-0041,Demo Member 08-1,Demo Supplier 05,Decarbonisation,Lot 1,2024-11-04,5781000.0,GU1 1AA,E07000209,Guildford,E12000008,South East,51.225041,-0.630765,True
+F21-SYN-0042,Demo Member 09-1,Demo Supplier 06,Construction Works,Lot 2,2024-01-07,5077000.0,BS1 1AA,E06000023,"Bristol, City of",E12000009,South West,51.401799,-2.613645,True
+F21-SYN-0043,Demo Member 09-2,Demo Supplier 07,Facilities Management,Lot 3,2024-03-10,4503000.0,BS1 1AA,E06000023,"Bristol, City of",E12000009,South West,51.487976,-2.623877,True
+F21-SYN-0044,Demo Member 09-1,Demo Supplier 08,Public Buildings,Lot 4,2024-05-13,4170000.0,BS1 1AA,E06000023,"Bristol, City of",E12000009,South West,51.41419,-2.579031,True
+F21-SYN-0045,Demo Member 09-2,Demo Supplier 09,Decarbonisation,Lot 1,2024-07-16,4815000.0,BS1 1AA,E06000023,"Bristol, City of",E12000009,South West,51.525864,-2.578839,True

@@ -1,0 +1,32 @@
+Fusion21 Contract ID,Fusion21 Member,Month Paid,Associated Foundation Budget,Programme Budget,Associated Foundation Case,Amount,ONS Region Code,Region Name,Synthetic Data
+F21-SYN-0001,Demo Member 01-1,2024-06,Community Wellbeing,880000.0,F21F-SYN-0001,93000.0,E12000001,North East,True
+F21-SYN-0002,Demo Member 01-2,2024-08,Environmental Sustainability,609000.0,F21F-SYN-0002,67000.0,E12000001,North East,True
+F21-SYN-0003,Demo Member 01-1,2024-10,Financial Inclusion,490000.0,F21F-SYN-0003,67000.0,E12000001,North East,True
+F21-SYN-0006,Demo Member 02-1,2024-04,Environmental Sustainability,728000.0,F21F-SYN-0004,91500.0,E12000002,North West,True
+F21-SYN-0007,Demo Member 02-2,2024-06,Financial Inclusion,831000.0,F21F-SYN-0005,180000.0,E12000002,North West,True
+F21-SYN-0007,Demo Member 02-2,2024-07,Employment and Skills,409000.0,F21F-SYN-0006,108500.0,E12000002,North West,True
+F21-SYN-0010,Demo Member 03-1,2024-12,Environmental Sustainability,330000.0,F21F-SYN-0007,44000.0,E12000003,Yorkshire and The Humber,True
+F21-SYN-0012,Demo Member 03-1,2024-04,Employment and Skills,642000.0,F21F-SYN-0008,71500.0,E12000003,Yorkshire and The Humber,True
+F21-SYN-0016,Demo Member 04-2,2024-12,Employment and Skills,789000.0,F21F-SYN-0009,157000.0,E12000004,East Midlands,True
+F21-SYN-0016,Demo Member 04-2,2025-01,Community Wellbeing,825000.0,F21F-SYN-0010,142000.0,E12000004,East Midlands,True
+F21-SYN-0019,Demo Member 05-1,2024-06,Financial Inclusion,540000.0,F21F-SYN-0011,69500.0,E12000005,West Midlands,True
+F21-SYN-0019,Demo Member 05-1,2024-07,Employment and Skills,682000.0,F21F-SYN-0012,161000.0,E12000005,West Midlands,True
+F21-SYN-0020,Demo Member 05-2,2024-08,Employment and Skills,272000.0,F21F-SYN-0013,33500.0,E12000005,West Midlands,True
+F21-SYN-0021,Demo Member 05-1,2024-10,Community Wellbeing,244000.0,F21F-SYN-0014,45000.0,E12000005,West Midlands,True
+F21-SYN-0021,Demo Member 05-1,2024-11,Environmental Sustainability,766000.0,F21F-SYN-0015,140500.0,E12000005,West Midlands,True
+F21-SYN-0022,Demo Member 05-2,2024-12,Environmental Sustainability,247000.0,F21F-SYN-0016,64000.0,E12000005,West Midlands,True
+F21-SYN-0023,Demo Member 06-1,2025-02,Financial Inclusion,670000.0,F21F-SYN-0017,96000.0,E12000006,East of England,True
+F21-SYN-0024,Demo Member 06-2,2024-04,Employment and Skills,667000.0,F21F-SYN-0018,66500.0,E12000006,East of England,True
+F21-SYN-0025,Demo Member 06-1,2024-06,Community Wellbeing,620000.0,F21F-SYN-0019,197500.0,E12000006,East of England,True
+F21-SYN-0025,Demo Member 06-1,2024-07,Environmental Sustainability,671000.0,F21F-SYN-0020,80500.0,E12000006,East of England,True
+F21-SYN-0030,Demo Member 07-1,2024-04,Environmental Sustainability,262000.0,F21F-SYN-0021,46000.0,E12000007,London,True
+F21-SYN-0030,Demo Member 07-1,2024-05,Financial Inclusion,522000.0,F21F-SYN-0022,171500.0,E12000007,London,True
+F21-SYN-0031,Demo Member 07-2,2024-06,Financial Inclusion,564000.0,F21F-SYN-0023,159500.0,E12000007,London,True
+F21-SYN-0032,Demo Member 07-1,2024-08,Employment and Skills,456000.0,F21F-SYN-0024,117000.0,E12000007,London,True
+F21-SYN-0034,Demo Member 07-1,2024-12,Environmental Sustainability,827000.0,F21F-SYN-0025,154000.0,E12000007,London,True
+F21-SYN-0035,Demo Member 08-1,2025-02,Financial Inclusion,376000.0,F21F-SYN-0026,83500.0,E12000008,South East,True
+F21-SYN-0037,Demo Member 08-1,2024-06,Community Wellbeing,856000.0,F21F-SYN-0027,127000.0,E12000008,South East,True
+F21-SYN-0038,Demo Member 08-2,2024-08,Environmental Sustainability,188000.0,F21F-SYN-0028,59000.0,E12000008,South East,True
+F21-SYN-0039,Demo Member 08-1,2024-10,Financial Inclusion,200000.0,F21F-SYN-0029,25000.0,E12000008,South East,True
+F21-SYN-0042,Demo Member 09-1,2024-04,Environmental Sustainability,559000.0,F21F-SYN-0030,94500.0,E12000009,South West,True
+F21-SYN-0044,Demo Member 09-1,2024-08,Employment and Skills,726000.0,F21F-SYN-0031,166500.0,E12000009,South West,True
