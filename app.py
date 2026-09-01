@@ -418,7 +418,7 @@ with map_tab:
         if selected_indicator == UNEMPLOYMENT_INDICATOR
         else "YlOrRd"
     )
-    fig = px.choropleth_map(
+    fig = px.choropleth(
         map_df,
         geojson=geojson,
         locations="area_code",
@@ -427,10 +427,7 @@ with map_tab:
         color_continuous_scale=colour_scale,
         hover_name="area_name",
         hover_data=hover_data,
-        map_style="carto-positron",
-        center={"lat": 54.8, "lon": -3.2},
-        zoom=4.55,
-        opacity=0.84,
+        projection="mercator",
         labels={
             "value": INDICATOR_SHORT_NAMES[selected_indicator],
             "mean_imd_rank": "Population-weighted mean IMD rank",
@@ -450,6 +447,18 @@ with map_tab:
             "thickness": 14,
             "len": 0.7,
         },
+    )
+    fig.update_geos(
+        fitbounds="locations",
+        resolution=50,
+        showframe=False,
+        showcoastlines=True,
+        coastlinecolor="#aab4bc",
+        showland=True,
+        landcolor="#f7f8f9",
+        showocean=True,
+        oceancolor="#d7dfe3",
+        bgcolor="#d7dfe3",
     )
     fig.update_traces(marker_line_width=0.3, marker_line_color="#697582")
 
@@ -658,7 +667,7 @@ with alignment_tab:
         "Lower need / lower contribution": "#9aa5b1",
     }
 
-    alignment_map = px.choropleth_map(
+    alignment_map = px.choropleth(
         alignment,
         geojson=boundaries["rgn_2019"],
         locations="area_code",
@@ -673,10 +682,7 @@ with alignment_tab:
             "selected_measure": ":.1f",
             "alignment_group": False,
         },
-        map_style="carto-positron",
-        center={"lat": 54.8, "lon": -3.2},
-        zoom=4.55,
-        opacity=0.86,
+        projection="mercator",
         labels={
             "social_need_score": "Social Need Score",
             "selected_measure": alignment_measure_labels[selected_alignment_measure],
@@ -687,6 +693,18 @@ with alignment_tab:
         height=610,
         margin={"r": 0, "t": 4, "l": 0, "b": 0},
         showlegend=False,
+    )
+    alignment_map.update_geos(
+        fitbounds="locations",
+        resolution=50,
+        showframe=False,
+        showcoastlines=True,
+        coastlinecolor="#aab4bc",
+        showland=True,
+        landcolor="#f7f8f9",
+        showocean=True,
+        oceancolor="#d7dfe3",
+        bgcolor="#d7dfe3",
     )
     alignment_map.update_traces(marker_line_width=0.3, marker_line_color="#697582")
 
@@ -867,7 +885,7 @@ with fusion21_tab:
     fusion21_map_data = synthetic_region_summary[
         ["area_code", "area_name", selected_fusion21_score]
     ].rename(columns={selected_fusion21_score: "value"})
-    fusion21_figure = px.choropleth_map(
+    fusion21_figure = px.choropleth(
         fusion21_map_data,
         geojson=boundaries["rgn_2019"],
         locations="area_code",
@@ -877,10 +895,7 @@ with fusion21_tab:
         color_continuous_scale="Viridis",
         hover_name="area_name",
         hover_data={"area_code": True, "value": ":.1f"},
-        map_style="carto-positron",
-        center={"lat": 54.8, "lon": -3.2},
-        zoom=4.55,
-        opacity=0.86,
+        projection="mercator",
         labels={"value": fusion21_score_labels[selected_fusion21_score]},
     )
     fusion21_figure.update_layout(
@@ -891,6 +906,18 @@ with fusion21_tab:
             "thickness": 14,
             "len": 0.7,
         },
+    )
+    fusion21_figure.update_geos(
+        fitbounds="locations",
+        resolution=50,
+        showframe=False,
+        showcoastlines=True,
+        coastlinecolor="#aab4bc",
+        showland=True,
+        landcolor="#f7f8f9",
+        showocean=True,
+        oceancolor="#d7dfe3",
+        bgcolor="#d7dfe3",
     )
     fusion21_figure.update_traces(
         marker_line_width=0.3,
