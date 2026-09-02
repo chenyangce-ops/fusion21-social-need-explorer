@@ -4,5 +4,6 @@ __pycache__/
 .env
 .streamlit/secrets.toml
 output/
+.playwright-cli/
 *.log
 .DS_Store
