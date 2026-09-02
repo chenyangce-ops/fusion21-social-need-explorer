@@ -7,7 +7,7 @@ import plotly.express as px
 import streamlit as st
 
 
-from pipeline import build_all_data, load_processed_data
+from data_loader import load_processed_data
 
 
 IMD_INDICATOR = "imd2019_need"
@@ -191,6 +191,8 @@ st.markdown(
 @st.cache_data(show_spinner=False)
 def get_data(force: bool = False) -> dict:
     if force:
+        from pipeline import build_all_data
+
         return build_all_data(force=True)
     return load_processed_data()
 

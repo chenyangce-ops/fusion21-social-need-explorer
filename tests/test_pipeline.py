@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 
+from data_loader import load_processed_data as load_app_data
 from pipeline import load_processed_data, validate
 
 
@@ -36,6 +37,13 @@ class PipelineTests(unittest.TestCase):
             "fusion21_synthetic": self.data["fusion21_synthetic"],
         }
         validate(transformed)
+
+    def test_lightweight_app_loader_reads_current_outputs(self) -> None:
+        app_data = load_app_data()
+        self.assertEqual(len(app_data["latest"]), 27)
+        self.assertEqual(
+            len(app_data["fusion21_synthetic"]["region_summary"]), 9
+        )
 
 
 if __name__ == "__main__":
