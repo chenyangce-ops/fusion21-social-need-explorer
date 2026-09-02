@@ -1,20 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
-import sys
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 
-ROOT = Path(__file__).resolve().parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-from fusion21 import build_all_data, load_processed_data
+from pipeline import build_all_data, load_processed_data
 
 
 IMD_INDICATOR = "imd2019_need"
@@ -224,32 +217,20 @@ def format_money(value: float) -> str:
     return f"£{value:,.0f}"
 
 
-def comparison_group(row: pd.Series, imd_median: float, unemployment_median: float) -> str:
-    high_imd = row["imd_score"] >= imd_median
-    high_unemployment = row["unemployment_rate"] >= unemployment_median
-    if high_imd and high_unemployment:
-        return "Higher on both"
-    if high_imd:
-        return "Higher deprivation only"
-    if high_unemployment:
-        return "Higher unemployment only"
-    return "Lower on both"
-
-
-def need_activity_group(
-    row: pd.Series,
-    need_median: float,
-    measure_median: float,
-) -> str:
-    high_need = row["raw_need_index"] >= need_median
-    high_measure = row["selected_measure"] >= measure_median
-    if high_need and not high_measure:
-        return "High need / lower contribution"
-    if high_need and high_measure:
-        return "High need / higher contribution"
-    if not high_need and high_measure:
-        return "Lower need / higher contribution"
-    return "Lower need / lower contribution"
+def add_relative_tertile(
+    frame: pd.DataFrame, value_column: str, output_column: str
+) -> pd.DataFrame:
+    """Assign low, medium and high bands by regional rank."""
+    result = frame.copy()
+    ordered = result.sort_values(
+        [value_column, "area_name"], ascending=[True, True], kind="mergesort"
+    )
+    positions = pd.Series(range(len(ordered)), index=ordered.index)
+    ordered[output_column] = pd.qcut(
+        positions, q=3, labels=["Low", "Medium", "High"]
+    ).astype(str)
+    result[output_column] = ordered[output_column]
+    return result
 
 
 refresh = False
@@ -359,11 +340,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-map_tab, alignment_tab, compare_tab, fusion21_tab = st.tabs(
+map_tab, alignment_tab, fusion21_tab = st.tabs(
     [
         "Social need map",
         "Need vs contribution",
-        "Compare need indicators",
         "Fusion21 synthetic data",
     ]
 )
@@ -572,16 +552,15 @@ with map_tab:
 
 with alignment_tab:
     st.markdown(
-        '<div class="section-heading">Where social need and recorded contribution do not align</div>',
+        '<div class="section-heading">Compare composite social need and contribution</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
         """
         <div class="section-copy">
-        This view places the public Raw Need Index beside one synthetic Fusion21
-        contribution measure. The four map categories are defined by the median of
-        each measure. The red category is the main review group: regions with higher
-        public need but lower recorded contribution in the demonstration data.
+        The two maps use the same English-region boundaries. The left map shows the
+        Composite Social Need Score and the right map shows the Composite Social
+        Contribution Score, allowing the spatial patterns to be compared directly.
         </div>
         """,
         unsafe_allow_html=True,
@@ -589,40 +568,24 @@ with alignment_tab:
     st.markdown(
         """
         <div class="warning-note">
-        <strong>Demonstration only:</strong> all Fusion21 records on this page are
-        synthetic. The view tests the method and interface; it does not evaluate
-        Fusion21's real performance or prove social impact.
+        <strong>Demonstration only:</strong> all Fusion21 contribution records are
+        synthetic. The comparison tests the method and interface; it does not
+        evaluate Fusion21's real performance or prove social impact.
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    alignment_measure_labels = {
-        "contribution_score": "Composite Contribution Score",
-        "procurement_score": "Procurement Score",
-        "activity_score": "Activity Score",
-        "foundation_score": "Foundation Score",
-    }
-    selected_alignment_measure = st.selectbox(
-        "Fusion21 contribution measure",
-        list(alignment_measure_labels),
-        format_func=lambda column: alignment_measure_labels[column],
-        key="alignment_measure_selector",
-    )
-
     social_need_latest = latest[
         latest["indicator_id"] == COMPOSITE_NEED_INDICATOR
     ][["area_code", "area_name", "value"]].rename(
-        columns={"value": "raw_need_index"}
+        columns={"value": "composite_need_score"}
     )
     alignment = social_need_latest.merge(
         synthetic_region_summary[
             [
                 "area_code",
                 "contribution_score",
-                "procurement_score",
-                "activity_score",
-                "foundation_score",
                 "contract_value",
                 "recorded_activity_count",
                 "activity_possible_count",
@@ -633,56 +596,207 @@ with alignment_tab:
         how="inner",
         validate="one_to_one",
     )
-    alignment["selected_measure"] = alignment[selected_alignment_measure]
-    need_median = float(alignment["raw_need_index"].median())
-    measure_median = float(alignment["selected_measure"].median())
-    alignment["alignment_group"] = alignment.apply(
-        need_activity_group,
-        axis=1,
-        need_median=need_median,
-        measure_median=measure_median,
+    alignment = add_relative_tertile(
+        alignment, "composite_need_score", "need_band"
     )
-    alignment_group_order = [
-        "High need / lower contribution",
-        "High need / higher contribution",
-        "Lower need / higher contribution",
-        "Lower need / lower contribution",
-    ]
-    alignment_group_colours = {
-        "High need / lower contribution": "#c84343",
-        "High need / higher contribution": "#e58a2b",
-        "Lower need / higher contribution": "#087e8b",
-        "Lower need / lower contribution": "#9aa5b1",
-    }
+    alignment = add_relative_tertile(
+        alignment, "contribution_score", "contribution_band"
+    )
+    alignment["priority_review"] = (
+        (alignment["need_band"] == "High")
+        & (alignment["contribution_band"] == "Low")
+    )
+    alignment["comparison_pattern"] = "Other regional pattern"
+    alignment.loc[
+        (alignment["need_band"] == "High")
+        & (alignment["contribution_band"] == "High"),
+        "comparison_pattern",
+    ] = "High need / high contribution"
+    alignment.loc[
+        (alignment["need_band"] == "High")
+        & (alignment["contribution_band"] == "Medium"),
+        "comparison_pattern",
+    ] = "High need / medium contribution"
+    alignment.loc[
+        alignment["priority_review"], "comparison_pattern"
+    ] = "Priority review: high need / low contribution"
+    alignment["screening_result"] = alignment["priority_review"].map(
+        {True: "Priority review", False: "Not priority review"}
+    )
+    selected_alignment = alignment[
+        alignment["area_name"] == selected_area_name
+    ].iloc[0]
+    st.markdown(
+        f'<div class="section-heading">Selected region: {selected_area_name}</div>',
+        unsafe_allow_html=True,
+    )
+    selected_need_column, selected_contribution_column, selected_status_column = (
+        st.columns(3)
+    )
+    with selected_need_column:
+        st.metric(
+            "Composite Social Need Score",
+            f"{selected_alignment['composite_need_score']:.1f}",
+        )
+    with selected_contribution_column:
+        st.metric(
+            "Composite Social Contribution Score",
+            f"{selected_alignment['contribution_score']:.1f}",
+        )
+    with selected_status_column:
+        st.metric("Priority screening", selected_alignment["screening_result"])
+        st.caption(
+            f"Need: {selected_alignment['need_band']} · "
+            f"Contribution: {selected_alignment['contribution_band']}"
+        )
 
-    alignment_map = px.choropleth(
+    need_map = px.choropleth(
         alignment,
         geojson=boundaries["rgn_2019"],
         locations="area_code",
         featureidkey="properties.rgn19cd",
-        color="alignment_group",
-        color_discrete_map=alignment_group_colours,
-        category_orders={"alignment_group": alignment_group_order},
+        color="composite_need_score",
+        range_color=(
+            float(alignment["composite_need_score"].min()),
+            float(alignment["composite_need_score"].max()),
+        ),
+        color_continuous_scale=[
+            [0.0, "#fff4e6"],
+            [0.5, "#f28e4b"],
+            [1.0, "#b42338"],
+        ],
+        hover_name="area_name",
+        hover_data={"area_code": True, "composite_need_score": ":.1f"},
+        projection="mercator",
+        labels={"composite_need_score": "Composite Social Need Score"},
+    )
+    contribution_map = px.choropleth(
+        alignment,
+        geojson=boundaries["rgn_2019"],
+        locations="area_code",
+        featureidkey="properties.rgn19cd",
+        color="contribution_score",
+        range_color=(0, 100),
+        color_continuous_scale=[
+            [0.0, "#e8f3f3"],
+            [0.5, "#55a6a9"],
+            [1.0, "#006b73"],
+        ],
+        hover_name="area_name",
+        hover_data={"area_code": True, "contribution_score": ":.1f"},
+        projection="mercator",
+        labels={"contribution_score": "Composite Social Contribution Score"},
+    )
+    for figure, title in (
+        (need_map, "Social need"),
+        (contribution_map, "Social contribution"),
+    ):
+        figure.update_layout(
+            height=500,
+            margin={"r": 0, "t": 42, "l": 0, "b": 74},
+            title={"text": title, "x": 0.02, "xanchor": "left"},
+            coloraxis_colorbar={
+                "orientation": "h",
+                "thickness": 10,
+                "len": 0.82,
+                "x": 0.5,
+                "xanchor": "center",
+                "y": -0.08,
+                "yanchor": "top",
+            },
+        )
+        figure.update_geos(
+            fitbounds="locations",
+            resolution=50,
+            showframe=False,
+            showcoastlines=True,
+            coastlinecolor="#aab4bc",
+            showland=True,
+            landcolor="#f7f8f9",
+            showocean=True,
+            oceancolor="#d7dfe3",
+            bgcolor="#d7dfe3",
+        )
+        figure.update_traces(marker_line_width=0.35, marker_line_color="#697582")
+
+    need_map_column, contribution_map_column = st.columns(2)
+    chart_config = {
+        "displayModeBar": False,
+        "doubleClick": False,
+        "scrollZoom": False,
+        "staticPlot": True,
+    }
+    with need_map_column:
+        st.plotly_chart(need_map, width="stretch", config=chart_config)
+    with contribution_map_column:
+        st.plotly_chart(contribution_map, width="stretch", config=chart_config)
+
+    st.markdown(
+        """
+        <div class="method-note">
+        <strong>How to read the maps:</strong> compare where darker areas appear in
+        each map, then use the table below for the exact scores. The colour scales
+        are separate because the two composite scores use different project scales;
+        the scores are not subtracted and the difference is not an impact measure.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="section-heading">High-need, low-contribution priority map</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+        <div class="section-copy">
+        This screening layer applies the retained bivariate method. The three regions
+        with the highest need scores form the High need band, and the three regions
+        with the lowest contribution scores form the Low contribution band. Their
+        overlap is highlighted for priority review.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    priority_map = px.choropleth(
+        alignment,
+        geojson=boundaries["rgn_2019"],
+        locations="area_code",
+        featureidkey="properties.rgn19cd",
+        color="comparison_pattern",
+        category_orders={
+            "comparison_pattern": [
+                "Priority review: high need / low contribution",
+                "High need / medium contribution",
+                "High need / high contribution",
+                "Other regional pattern",
+            ]
+        },
+        color_discrete_map={
+            "Priority review: high need / low contribution": "#b42338",
+            "High need / medium contribution": "#f28e4b",
+            "High need / high contribution": "#087e8b",
+            "Other regional pattern": "#d7dde2",
+        },
         hover_name="area_name",
         hover_data={
             "area_code": True,
-            "raw_need_index": ":.1f",
-            "selected_measure": ":.1f",
-            "alignment_group": False,
+            "composite_need_score": ":.1f",
+            "need_band": True,
+            "contribution_score": ":.1f",
+            "contribution_band": True,
+            "comparison_pattern": False,
         },
         projection="mercator",
         labels={
-            "raw_need_index": "Raw Need Index",
-            "selected_measure": alignment_measure_labels[selected_alignment_measure],
-            "alignment_group": "Need-contribution pattern",
+            "comparison_pattern": "Screening result",
+            "composite_need_score": "Need score",
+            "need_band": "Need band",
+            "contribution_score": "Contribution score",
+            "contribution_band": "Contribution band",
         },
     )
-    alignment_map.update_layout(
-        height=610,
-        margin={"r": 0, "t": 4, "l": 0, "b": 0},
-        showlegend=False,
-    )
-    alignment_map.update_geos(
+    priority_map.update_geos(
         fitbounds="locations",
         resolution=50,
         showframe=False,
@@ -694,155 +808,72 @@ with alignment_tab:
         oceancolor="#d7dfe3",
         bgcolor="#d7dfe3",
     )
-    alignment_map.update_traces(marker_line_width=0.3, marker_line_color="#697582")
-
-    selected_alignment = alignment[
-        alignment["area_name"] == selected_area_name
-    ].iloc[0]
-    alignment_map_column, alignment_detail_column = st.columns([2.15, 1])
-    with alignment_map_column:
-        st.plotly_chart(
-            alignment_map,
-            width="stretch",
-            config={
-                "displayModeBar": False,
-                "doubleClick": False,
-                "scrollZoom": False,
-                "staticPlot": True,
-            },
-        )
-        st.markdown(
-            """
-            <div class="map-legend">
-                <div class="map-legend-title">Need-contribution pattern</div>
-                <div class="map-legend-item"><span class="map-legend-swatch" style="background:#c84343"></span>High need / lower contribution</div>
-                <div class="map-legend-item"><span class="map-legend-swatch" style="background:#e58a2b"></span>High need / higher contribution</div>
-                <div class="map-legend-item"><span class="map-legend-swatch" style="background:#087e8b"></span>Lower need / higher contribution</div>
-                <div class="map-legend-item"><span class="map-legend-swatch" style="background:#9aa5b1"></span>Lower need / lower contribution</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with alignment_detail_column:
-        st.subheader(selected_area_name)
-        st.metric(
-            "Raw Need Index",
-            f"{selected_alignment['raw_need_index']:.1f}",
-        )
-        st.metric(
-            alignment_measure_labels[selected_alignment_measure],
-            f"{selected_alignment['selected_measure']:.1f}",
-        )
-        st.markdown(
-            f"""
-            <div class="detail-box">
-                <div class="detail-label">Need-contribution pattern</div>
-                <div class="detail-value" style="font-size:1.05rem">{selected_alignment['alignment_group']}</div>
-            </div>
-            <div class="method-note">
-            <strong>Classification:</strong> higher/lower is determined against the
-            median across the nine English regions. This is a screening method, not
-            a causal impact assessment.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
+    priority_map.update_traces(marker_line_width=0.45, marker_line_color="#697582")
+    priority_map.update_layout(
+        height=570,
+        margin={"r": 0, "t": 8, "l": 0, "b": 90},
+        legend={
+            "orientation": "h",
+            "y": -0.08,
+            "yanchor": "top",
+            "x": 0.5,
+            "xanchor": "center",
+            "title": None,
+        },
+    )
+    st.plotly_chart(priority_map, width="stretch", config=chart_config)
+    priority_count = int(alignment["priority_review"].sum())
     st.markdown(
-        '<div class="section-heading">Check the relationship, not only the categories</div>',
+        f"""
+        <div class="warning-note">
+        <strong>Screening result:</strong> {priority_count} of the nine regions are
+        currently marked for priority review. This is a relative comparison using
+        synthetic contribution data; it is a prompt for discussion, not evidence of
+        poor performance or a causal impact gap.
+        </div>
+        """,
         unsafe_allow_html=True,
     )
-    alignment_scatter = px.scatter(
-        alignment,
-        x="raw_need_index",
-        y="selected_measure",
-        text="area_name",
-        color="alignment_group",
-        color_discrete_map=alignment_group_colours,
-        category_orders={"alignment_group": alignment_group_order},
-        hover_name="area_name",
-        hover_data={
-            "area_code": True,
-            "raw_need_index": ":.1f",
-            "selected_measure": ":.1f",
-            "alignment_group": False,
-        },
-        labels={
-            "raw_need_index": "Raw Social Need Index",
-            "selected_measure": alignment_measure_labels[selected_alignment_measure],
-            "alignment_group": "Need-contribution pattern",
-        },
-    )
-    alignment_scatter.add_vline(
-        x=need_median,
-        line_dash="dash",
-        line_color="#8b96a3",
-    )
-    alignment_scatter.add_hline(
-        y=measure_median,
-        line_dash="dash",
-        line_color="#8b96a3",
-    )
-    alignment_scatter.update_traces(marker={"size": 14}, textposition="top center")
-    alignment_scatter.update_layout(
-        height=520,
-        margin={"r": 20, "t": 25, "l": 20, "b": 10},
-        showlegend=False,
-    )
-    st.plotly_chart(
-        alignment_scatter,
-        width="stretch",
-        config={"displayModeBar": False},
-    )
 
     st.markdown(
-        '<div class="section-heading">Regional screening order</div>',
+        '<div class="section-heading">Exact regional values</div>',
         unsafe_allow_html=True,
     )
     st.caption(
-        "Regions are grouped by need-contribution pattern. Within each group, "
-        "regions with the higher Raw Need Index appear first."
+        "The table is ordered by Composite Social Need Score so the exact values "
+        "behind both maps can be checked."
     )
-    priority_table = alignment[
+    comparison_table = alignment[
         [
             "area_name",
-            "raw_need_index",
-            "selected_measure",
-            "alignment_group",
+            "composite_need_score",
+            "need_band",
+            "contribution_score",
+            "contribution_band",
+            "screening_result",
         ]
-    ].copy()
-    pattern_priority = {
-        "High need / lower contribution": 1,
-        "High need / higher contribution": 2,
-        "Lower need / lower contribution": 3,
-        "Lower need / higher contribution": 4,
-    }
-    priority_table["pattern_priority"] = priority_table["alignment_group"].map(
-        pattern_priority
-    )
-    priority_table = priority_table.sort_values(
-        ["pattern_priority", "raw_need_index"],
-        ascending=[True, False],
-    ).drop(columns="pattern_priority")
+    ].sort_values("composite_need_score", ascending=False)
     st.dataframe(
-        priority_table,
+        comparison_table,
         width="stretch",
         hide_index=True,
         column_config={
             "area_name": "Region",
-            "raw_need_index": st.column_config.NumberColumn(
-                "Raw Need Index", format="%.1f"
+            "composite_need_score": st.column_config.NumberColumn(
+                "Composite Social Need Score", format="%.1f"
             ),
-            "selected_measure": st.column_config.NumberColumn(
-                alignment_measure_labels[selected_alignment_measure], format="%.1f"
+            "contribution_score": st.column_config.NumberColumn(
+                "Composite Social Contribution Score", format="%.1f"
             ),
-            "alignment_group": "Pattern",
+            "need_band": "Need band",
+            "contribution_band": "Contribution band",
+            "screening_result": "Screening result",
         },
     )
 
 with fusion21_tab:
     st.markdown(
-        '<div class="section-heading">Fusion21 regional contribution scores</div>',
+        '<div class="section-heading">Fusion21 regional data and social contribution scores</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -850,16 +881,17 @@ with fusion21_tab:
         <div class="warning-note">
         <strong>Synthetic demonstration data:</strong> these records were generated
         to test the pipeline before anonymised Fusion21 data is available. They show
-        how procurement, recorded activities and Foundation investment can be
-        processed, but they are not evidence of real social impact.
+        how procurement footprint, recorded activities and Foundation investment can
+        be processed. Contract value is shown separately and is not treated as social
+        contribution; none of the synthetic records is evidence of real social impact.
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     fusion21_score_labels = {
-        "contribution_score": "Composite Contribution Score",
-        "procurement_score": "Procurement Score",
+        "contribution_score": "Composite Social Contribution Score",
+        "contract_value": "Procurement footprint (contract value)",
         "activity_score": "Activity Score",
         "foundation_score": "Foundation Score",
     }
@@ -873,16 +905,24 @@ with fusion21_tab:
     fusion21_map_data = synthetic_region_summary[
         ["area_code", "area_name", selected_fusion21_score]
     ].rename(columns={selected_fusion21_score: "value"})
+    fusion21_map_range = (
+        (0, float(fusion21_map_data["value"].max()))
+        if selected_fusion21_score == "contract_value"
+        else (0, 100)
+    )
+    fusion21_value_format = (
+        ":,.0f" if selected_fusion21_score == "contract_value" else ":.1f"
+    )
     fusion21_figure = px.choropleth(
         fusion21_map_data,
         geojson=boundaries["rgn_2019"],
         locations="area_code",
         featureidkey="properties.rgn19cd",
         color="value",
-        range_color=(0, 100),
+        range_color=fusion21_map_range,
         color_continuous_scale="Viridis",
         hover_name="area_name",
-        hover_data={"area_code": True, "value": ":.1f"},
+        hover_data={"area_code": True, "value": fusion21_value_format},
         projection="mercator",
         labels={"value": fusion21_score_labels[selected_fusion21_score]},
     )
@@ -895,6 +935,8 @@ with fusion21_tab:
             "len": 0.7,
         },
     )
+    if selected_fusion21_score == "contract_value":
+        fusion21_figure.update_coloraxes(colorbar_tickprefix="£")
     fusion21_figure.update_geos(
         fitbounds="locations",
         resolution=50,
@@ -931,12 +973,8 @@ with fusion21_tab:
     with fusion21_detail_column:
         st.subheader(selected_area_name)
         st.metric(
-            "Composite Contribution Score",
+            "Composite Social Contribution Score",
             f"{selected_fusion21_region['contribution_score']:.1f}",
-        )
-        st.metric(
-            "Procurement Score",
-            f"{selected_fusion21_region['procurement_score']:.1f}",
         )
         st.metric(
             "Activity Score",
@@ -1013,7 +1051,6 @@ with fusion21_tab:
             "recorded_activity_count",
             "activity_possible_count",
             "foundation_investment",
-            "procurement_score",
             "activity_score",
             "foundation_score",
             "contribution_score",
@@ -1033,9 +1070,6 @@ with fusion21_tab:
             "foundation_investment": st.column_config.NumberColumn(
                 "Foundation Amount", format="£%.0f"
             ),
-            "procurement_score": st.column_config.NumberColumn(
-                "Procurement Score", format="%.1f"
-            ),
             "activity_score": st.column_config.NumberColumn(
                 "Activity Score", format="%.1f%%"
             ),
@@ -1043,7 +1077,7 @@ with fusion21_tab:
                 "Foundation Score", format="%.1f"
             ),
             "contribution_score": st.column_config.NumberColumn(
-                "Composite Score", format="%.1f"
+                "Composite Social Contribution Score", format="%.1f"
             ),
         },
     )
@@ -1051,13 +1085,13 @@ with fusion21_tab:
         """
         <div class="method-note">
         <strong>Score calculation</strong><br>
-        Procurement Score = regional contract value converted to a 0-100 Min-Max
-        scale.<br>
+        Procurement footprint = total regional contract value. It is shown separately
+        and is not included in the Social Contribution Score.<br>
         Activity Score = recorded Yes answers ÷ all six possible activity answers
         across projects × 100.<br>
         Foundation Score = regional Foundation investment converted to a 0-100
         Min-Max scale.<br>
-        Composite Contribution Score = equal average of the three scores.
+        Composite Social Contribution Score = (Activity Score + Foundation Score) ÷ 2.
         </div>
         """,
         unsafe_allow_html=True,
@@ -1095,166 +1129,3 @@ with fusion21_tab:
                 ),
             },
         )
-
-with compare_tab:
-    st.markdown(
-        '<div class="section-heading">Deprivation compared with unemployment</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
-        <div class="section-copy">
-        The scatter plot keeps both measures separate. Regions further right have
-        higher population-weighted IMD scores; regions higher on the chart have a higher
-        unemployment rate. Median lines provide a simple reference without forcing
-        nine regions into unstable quintile groups.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    comparison = (
-        latest[latest["indicator_id"].isin(required_indicators)]
-        .pivot_table(
-            index=["area_code", "area_name"],
-            columns="indicator_id",
-            values="value",
-            aggfunc="first",
-        )
-        .reset_index()
-        .rename(
-            columns={
-                IMD_INDICATOR: "imd_score",
-                UNEMPLOYMENT_INDICATOR: "unemployment_rate",
-                COMPOSITE_NEED_INDICATOR: "composite_need",
-            }
-        )
-        .dropna(subset=["imd_score", "unemployment_rate"])
-    )
-    imd_median = float(comparison["imd_score"].median())
-    unemployment_median = float(comparison["unemployment_rate"].median())
-    comparison["comparison_group"] = comparison.apply(
-        comparison_group,
-        axis=1,
-        imd_median=imd_median,
-        unemployment_median=unemployment_median,
-    )
-
-    group_colours = {
-        "Higher on both": "#c84343",
-        "Higher deprivation only": "#e66b3d",
-        "Higher unemployment only": "#087e8b",
-        "Lower on both": "#8592a3",
-    }
-    scatter = px.scatter(
-        comparison,
-        x="imd_score",
-        y="unemployment_rate",
-        text="area_name",
-        color="comparison_group",
-        color_discrete_map=group_colours,
-        hover_name="area_name",
-        hover_data={
-            "area_code": True,
-            "imd_score": ":.1f",
-            "unemployment_rate": ":.1f",
-            "composite_need": ":.1f",
-            "comparison_group": False,
-        },
-        labels={
-            "imd_score": "Population-weighted mean IMD score",
-            "unemployment_rate": "Unemployment rate (%)",
-            "composite_need": "Raw social need index",
-            "comparison_group": "Pattern",
-        },
-    )
-    scatter.add_vline(x=imd_median, line_dash="dash", line_color="#8b96a3")
-    scatter.add_hline(
-        y=unemployment_median,
-        line_dash="dash",
-        line_color="#8b96a3",
-    )
-    scatter.update_traces(marker={"size": 13}, textposition="top center")
-    scatter.update_layout(
-        height=570,
-        margin={"r": 20, "t": 35, "l": 20, "b": 10},
-        legend_title_text="Regional pattern",
-    )
-
-    chart_column, interpretation_column = st.columns([2.2, 1])
-    with chart_column:
-        st.plotly_chart(
-            scatter,
-            width="stretch",
-            config={"displayModeBar": False},
-        )
-
-    with interpretation_column:
-        st.subheader("How to use this view")
-        st.markdown(
-            """
-            <div class="method-note">
-            <strong>Start with regions higher on both measures.</strong><br>
-            These regions show stronger need across two different public indicators
-            and can be reviewed first when Fusion21 activity data becomes available.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            """
-            <div class="warning-note">
-            <strong>The raw index is exploratory.</strong><br>
-            It is the arithmetic average of the observed IMD score and unemployment
-            rate, with no Min-Max standardisation. Their units and numerical ranges
-            differ, so the result is not a percentage and does not imply equal
-            influence. IMD also contains an Employment Deprivation Domain, so this
-            scatter plot remains important for checking possible overlap.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        selected_comparison = comparison[
-            comparison["area_name"] == selected_area_name
-        ].iloc[0]
-        st.markdown(
-            f"""
-            <div class="detail-box">
-                <div class="detail-label">{selected_area_name}</div>
-                <div class="detail-value">{selected_comparison['comparison_group']}</div>
-            </div>
-            <div class="detail-box">
-                <div class="detail-label">Raw social need index</div>
-                <div class="detail-value">{selected_comparison['composite_need']:.1f}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    comparison_table = comparison[
-        [
-            "area_name",
-            "imd_score",
-            "unemployment_rate",
-            "composite_need",
-            "comparison_group",
-        ]
-    ].sort_values("composite_need", ascending=False)
-    st.dataframe(
-        comparison_table,
-        width="stretch",
-        hide_index=True,
-        column_config={
-            "area_name": "Region",
-            "imd_score": st.column_config.NumberColumn(
-                "Mean IMD score", format="%.1f"
-            ),
-            "unemployment_rate": st.column_config.NumberColumn(
-                "Unemployment rate", format="%.1f%%"
-            ),
-            "composite_need": st.column_config.NumberColumn(
-                "Raw social need index", format="%.1f"
-            ),
-            "comparison_group": "Pattern",
-        },
-    )
